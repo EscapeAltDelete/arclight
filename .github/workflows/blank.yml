@@ -1,4 +1,4 @@
-name: Ultra Lean Replace Arclight 1.20.1 JAR
+name: Ultra Lean Replace Arclight 1.20.1 JAR NO COMMENTS NO IFS
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  lean-replace-jar:
+  lean-replace-jar-no-bullshit:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,53 +19,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download and Replace Arclight JAR
+      - name: Download and Replace Arclight JAR - NO BULLSHIT MODE
         run: |
-          INITIAL_API_URL="https://files.hypoglycemia.icu/v1/files/arclight/minecraft/${{ env.MC_VERSION }}"
-          echo "INFO: Stage 1 - Fetching manifest URL from $INITIAL_API_URL"
-
           set -e -o pipefail
+
+          INITIAL_API_URL="https://files.hypoglycemia.icu/v1/files/arclight/minecraft/${{ env.MC_VERSION }}"
           
           MANIFEST_RESPONSE_FILE=$(mktemp)
-          HTTP_CODE_MANIFEST=$(curl -sSL -w "%{http_code}" -o "$MANIFEST_RESPONSE_FILE" "$INITIAL_API_URL")
-
-          if [ "$HTTP_CODE_MANIFEST" -ne 200 ]; then
-            echo "::error:: Stage 1 API request to $INITIAL_API_URL failed with HTTP status $HTTP_CODE_MANIFEST."
-            cat "$MANIFEST_RESPONSE_FILE"
-            rm "$MANIFEST_RESPONSE_FILE"
-            exit 1
-          fi
-          
-          echo "DEBUG: Stage 1 Manifest API Response Content:"
-          cat "$MANIFEST_RESPONSE_FILE"
-          echo "DEBUG: End of Stage 1 Manifest API Response Content"
-
-          LATEST_SNAPSHOT_JAR_URL=$(jq -r '.files[] | select(.name=="latest-snapshot") | .link' "$MANIFEST_RESPONSE_FILE")
+          curl -sSL -o "$MANIFEST_RESPONSE_FILE" "$INITIAL_API_URL"
+          LATEST_SNAPSHOT_MANIFEST_URL=$(jq -r '.files[] | select(.name=="latest-snapshot") | .link' "$MANIFEST_RESPONSE_FILE")
           rm "$MANIFEST_RESPONSE_FILE"
-
-          if [ -z "$LATEST_SNAPSHOT_JAR_URL" ] || [ "$LATEST_SNAPSHOT_JAR_URL" == "null" ]; then
-            echo "::error:: Failed to parse 'latest-snapshot' link from manifest API response for MC ${{ env.MC_VERSION }}."
-            exit 1
-          fi
           
-          echo "INFO: Stage 2 - Actual JAR download URL found: $LATEST_SNAPSHOT_JAR_URL"
-          echo "INFO: Downloading and replacing ${{ env.TARGET_JAR_FILENAME }} from $LATEST_SNAPSHOT_JAR_URL"
+          JAR_INFO_RESPONSE_FILE=$(mktemp)
+          curl -sSL -o "$JAR_INFO_RESPONSE_FILE" "$LATEST_SNAPSHOT_MANIFEST_URL"
+          FINAL_JAR_DOWNLOAD_URL=$(jq -r '.files[0].permlink' "$JAR_INFO_RESPONSE_FILE")
+          rm "$JAR_INFO_RESPONSE_FILE"
           
-          curl -sSL --fail -o "${{ env.TARGET_JAR_FILENAME }}" "$LATEST_SNAPSHOT_JAR_URL"
+          curl -sSL --fail -o "${{ env.TARGET_JAR_FILENAME }}" "$FINAL_JAR_DOWNLOAD_URL"
           
           echo "INFO: Download complete. ${{ env.TARGET_JAR_FILENAME }} has been replaced/created."
 
-      - name: Commit and Push Changes
+      - name: Commit and Push Changes - NO BULLSHIT MODE
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           
           git add "${{ env.TARGET_JAR_FILENAME }}"
           
-          if git diff --staged --quiet; then
-            echo "INFO: No changes to commit for ${{ env.TARGET_JAR_FILENAME }}."
-          else
-            git commit -m "Update Arclight 1.20.1 JAR (scheduled)"
-            echo "INFO: Changes committed. Pushing to remote..."
+          if ! git diff --staged --quiet; then
+            git commit -m "Update Arclight 1.20.1 JAR (ultra lean)"
             git push
+          else
+            echo "INFO: No actual file changes to commit."
           fi
