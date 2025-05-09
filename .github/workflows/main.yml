@@ -1,11 +1,11 @@
 name: Grab latest Arclight release
 on:
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '0 0 * * 0'
   workflow_dispatch:
 
 jobs:
-  lean-replace-jar:
+  replace-jar:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -46,7 +46,7 @@ jobs:
           git add "${{ env.TARGET_JAR_FILENAME }}"
           
           if ! git diff --staged --quiet; then
-            git commit -m "Update Arclight 1.20.1 JAR (ultra lean)"
+            git commit -m "Update Arclight 1.20.1 JAR"
             git push
           else
             echo "INFO: No actual file changes to commit."
