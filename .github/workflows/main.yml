@@ -1,12 +1,11 @@
-name: Ultra Lean Replace Arclight 1.20.1 JAR NO COMMENTS NO IFS
-
+name: Grab latest Arclight release
 on:
   schedule:
     - cron: '0 */4 * * *'
   workflow_dispatch:
 
 jobs:
-  lean-replace-jar-no-bullshit:
+  lean-replace-jar:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -19,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download and Replace Arclight JAR - NO BULLSHIT MODE
+      - name: Grab latest Arclight release
         run: |
           set -e -o pipefail
 
@@ -39,7 +38,7 @@ jobs:
           
           echo "INFO: Download complete. ${{ env.TARGET_JAR_FILENAME }} has been replaced/created."
 
-      - name: Commit and Push Changes - NO BULLSHIT MODE
+      - name: Commit and Push Changes
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
