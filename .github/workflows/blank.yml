@@ -1,0 +1,67 @@
+name: Ultra Lean Replace Arclight 1.20.1 JAR
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch:
+
+jobs:
+  lean-replace-jar:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    env:
+      MC_VERSION: "1.20.1"
+      TARGET_JAR_FILENAME: "arclight-1.20.1-latest.jar"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download and Replace Arclight JAR
+        run: |
+          API_URL="https://files.hypoglycemia.icu/v1/files/arclight/minecraft/${{ env.MC_VERSION }}"
+          echo "INFO: Attempting to get download URL from $API_URL"
+
+          set -e -o pipefail
+          
+          API_RESPONSE_FILE=$(mktemp)
+          HTTP_CODE=$(curl -sSL -w "%{http_code}" -o "$API_RESPONSE_FILE" "$API_URL")
+
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "::error:: API request to $API_URL failed with HTTP status $HTTP_CODE."
+            head -n 20 "$API_RESPONSE_FILE"
+            rm "$API_RESPONSE_FILE"
+            exit 1
+          fi
+          
+          LATEST_DOWNLOAD_URL=$(jq -r '.[0].downloadUrl' "$API_RESPONSE_FILE")
+          rm "$API_RESPONSE_FILE"
+
+          if [ -z "$LATEST_DOWNLOAD_URL" ] || [ "$LATEST_DOWNLOAD_URL" == "null" ]; then
+            echo "::error:: Failed to parse download URL from API response for MC ${{ env.MC_VERSION }}."
+            exit 1
+          fi
+          
+          echo "INFO: Download URL found: $LATEST_DOWNLOAD_URL"
+          echo "INFO: Downloading and replacing ${{ env.TARGET_JAR_FILENAME }}..."
+          
+          curl -sSL --fail -o "${{ env.TARGET_JAR_FILENAME }}" "$LATEST_DOWNLOAD_URL"
+          
+          echo "INFO: Download complete. ${{ env.TARGET_JAR_FILENAME }} has been replaced/created."
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          git add "${{ env.TARGET_JAR_FILENAME }}"
+          
+          if git diff --staged --quiet; then
+            echo "INFO: No changes to commit for ${{ env.TARGET_JAR_FILENAME }}."
+          else
+            git commit -m "Update Arclight 1.20.1 JAR (scheduled)"
+            echo "INFO: Changes committed. Pushing to remote..."
+            git push
+          fi
